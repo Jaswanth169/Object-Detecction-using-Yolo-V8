@@ -1,0 +1,50 @@
+!nvidia-smi
+import os
+HOME = os.getcwd()
+print(HOME)
+!pip install ultralytics==8.0.20
+from IPython import display
+display.clear_output()
+import ultralytics
+ultralytics.checks()
+from ultralytics import YOLO
+from IPython.display import display, Image
+%cd {HOME}
+!yolo task=detect mode=predict model=yolov8n.pt conf=0.25 source='/content/Turkey-Grand-Bazaar-715-1024x682.jpg' save=True
+%cd {HOME}
+Image(filename='/content/ICC-2.jpg', height=600)
+model = YOLO(f'{HOME}/yolov8n.pt')
+results = model.predict(source='https://media.roboflow.com/notebooks/examples/dog.jpeg', conf=0.25)
+results[0].boxes.xyxy
+results[0].boxes.conf
+results[0].boxes.cls
+!mkdir {HOME}/datasets
+%cd {HOME}/datasets
+
+!pip install roboflow
+
+from roboflow import Roboflow
+rf = Roboflow(api_key="Your Api Key")
+project = rf.workspace("phenoi").project("object-detection-rjslo")
+dataset = project.version(1).download("yolov8")
+%cd {HOME}
+
+!yolo task=detect mode=train model=yolov8s.pt data={dataset.location}/data.yaml epochs=25 imgsz=800 plots=True
+!ls {HOME}/runs/detect/train/
+%cd {HOME}
+Image(filename=f'{HOME}/runs/detect/train/confusion_matrix.png', width=600)
+%cd {HOME}
+Image(filename=f'{HOME}/runs/detect/train/results.png', width=600)
+%cd {HOME}
+Image(filename=f'{HOME}/runs/detect/train/val_batch0_pred.jpg', width=600)
+%cd {HOME}
+
+!yolo task=detect mode=val model={HOME}/runs/detect/train/weights/best.pt data={dataset.location}/data.yaml
+%cd {HOME}
+!yolo task=detect mode=predict model={HOME}/runs/detect/train/weights/best.pt conf=0.25 source={dataset.location}/test/images save=True
+import glob
+from IPython.display import Image, display
+
+for image_path in glob.glob(f'{HOME}/runs/detect/predict3/*.jpg')[:3]:
+      display(Image(filename=image_path, width=600))
+      print("\n")
